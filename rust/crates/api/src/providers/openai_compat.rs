@@ -1369,8 +1369,12 @@ pub fn translate_message(message: &InputMessage, model: &str) -> Vec<Value> {
             } else {
                 let mut msg = serde_json::json!({
                     "role": "assistant",
-                    "content": (!text.is_empty()).then_some(text),
                 });
+                // Omit content entirely when empty (tool-call-only turns). Some
+                // tests/providers reject an explicit null content on those turns.
+                if !text.is_empty() {
+                    msg["content"] = json!(text);
+                }
                 if let Some(field) = interleaved_field {
                     // Always emit the field for interleaved models, even when the
                     // reasoning text is empty. DeepSeek's wire contract requires the

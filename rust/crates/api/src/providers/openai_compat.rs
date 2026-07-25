@@ -1115,8 +1115,8 @@ fn is_local_openai_compatible_base_url(url: &str) -> bool {
 
 fn wire_model_for_base_url<'a>(
     model: &'a str,
-    config: OpenAiCompatConfig,
-    base_url: &str,
+    _config: OpenAiCompatConfig,
+    _base_url: &str,
 ) -> Cow<'a, str> {
     let Some(pos) = model.find('/') else {
         return Cow::Borrowed(model);
@@ -1124,18 +1124,12 @@ fn wire_model_for_base_url<'a>(
     let prefix = &model[..pos];
     let lowered_prefix = prefix.to_ascii_lowercase();
 
-    if lowered_prefix == "openai" {
-        let normalized_base_url = normalize_base_url_for_model_routing(base_url);
-        let default_base_url = normalize_base_url_for_model_routing(config.default_base_url);
-        if normalized_base_url.eq_ignore_ascii_case(default_base_url)
-            || is_local_openai_compatible_base_url(base_url)
-        {
-            return Cow::Borrowed(&model[pos + 1..]);
-        }
-        return Cow::Borrowed(model);
-    }
-
-    if matches!(lowered_prefix.as_str(), "xai" | "grok" | "qwen" | "kimi") {
+    // Routing prefixes are claw-code's internal convention — always strip
+    // them before sending to the wire so the backend sees the bare model id.
+    if matches!(
+        lowered_prefix.as_str(),
+        "openai" | "xai" | "grok" | "qwen" | "kimi"
+    ) {
         return Cow::Borrowed(&model[pos + 1..]);
     }
     if lowered_prefix == "local" {
